@@ -4,7 +4,7 @@ import { getSearchProvider, type SearchProvider } from "../search/provider";
 
 export type ResearchInput = { companyName?: string; inn?: string };
 
-/** DEMO: детерминированные синтетические данные, привязанные к mock-источникам. Используется без ANTHROPIC_API_KEY. */
+/** DEMO: детерминированные синтетические данные, привязанные к mock-источникам. Используется без GEMINI_API_KEY. */
 function demoCore(input: ResearchInput, s: Source[]): CompanyCore {
   const by = (t: Source["sourceType"]) => (s.find((x) => x.sourceType === t) ?? s[0]).id;
   const [site, hh, press, gov] = [by("official_site"), by("vacancy"), by("press_release"), by("gov")];
