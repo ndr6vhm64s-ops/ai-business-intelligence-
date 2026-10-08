@@ -7,20 +7,31 @@ export const RU_RULES = "Отвечай только на русском язы�
 
 type Turn = { role: "user" | "model"; parts: { text: string }[] };
 
+// Порядок перебора: модель из GEMINI_MODEL, затем запасные.
+const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+
 async function generate(system: string, contents: Turn[]): Promise<string> {
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const generationConfig: Record<string, unknown> = { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.3 };
-  if (model.startsWith("gemini-2.5-flash")) generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY ?? "" },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig }),
-  });
-  if (res.status === 429) throw new AgentError("Лимит бесплатных запросов исчерпан. Подождите минуту и повторите.");
-  if (res.status === 400 || res.status === 403) throw new AgentError("Ключ Gemini не принят. Проверьте GEMINI_API_KEY.");
-  if (!res.ok) throw new AgentError("Модель недоступна. Попробуйте ещё раз.");
-  const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+  const models = [process.env.GEMINI_MODEL, ...FALLBACK_MODELS].filter((m): m is string => Boolean(m));
+  let lastDetail = "";
+  for (const model of models) {
+    const generationConfig: Record<string, unknown> = { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.3 };
+    if (model.startsWith("gemini-2.5-flash")) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY ?? "" },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+      return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("");
+    }
+    const body = (await res.text()).slice(0, 200);
+    lastDetail = `${model}, код ${res.status}: ${body}`;
+    if (res.status === 429) throw new AgentError("Лимит бесплатных запросов исчерпан. Подождите минуту и повторите.");
+    if (res.status === 404 || res.status >= 500) continue; // пробуем следующую модель
+    throw new AgentError(`Запрос к Gemini отклонён (${lastDetail})`);
+  }
+  throw new AgentError(`Модель недоступна (${lastDetail})`);
 }
 
 /** Вызов модели со структурированным ответом. Сырой вывод никогда не используется без валидации Zod. */
