@@ -1,5 +1,5 @@
 // Запуск: npm run evals. Всегда в демо-режиме (без внешних вызовов).
-delete process.env.ANTHROPIC_API_KEY; delete process.env.SEARCH_API_KEY;
+delete process.env.GEMINI_API_KEY; delete process.env.SEARCH_API_KEY;
 import { researchAgent } from "../lib/agents/research";
 import { businessAnalystAgent } from "../lib/agents/analyst";
 import { productAgent } from "../lib/agents/product";

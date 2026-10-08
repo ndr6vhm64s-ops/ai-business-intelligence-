@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## Архитектура
-Next.js (App Router) + TypeScript + Tailwind + Zod + Anthropic SDK. Пайплайн: researchAgent → businessAnalystAgent → productAgent. Контракты в `lib/schemas.ts`. Поиск — через интерфейс `SearchProvider`.
+Next.js (App Router) + TypeScript + Tailwind + Zod + Gemini API. Пайплайн: researchAgent → businessAnalystAgent → productAgent. Контракты в `lib/schemas.ts`. Поиск — через интерфейс `SearchProvider`.
 
 ## Правила (обязательные)
 - NEVER trust raw LLM output. Every AI output must be schema validated (`callJson` в `lib/llm.ts`).
